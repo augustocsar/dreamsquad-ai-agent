@@ -1,42 +1,22 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from app.agent import agent_instance
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.endpoints import router as api_router
+from app.core.config import settings
 
 app = FastAPI(
-    title="Chat API com Agente IA",
-    description="API que integra FastAPI com Strands Agents e Ollama.",
-    version="1.0.0"
+    title=settings.PROJECT_NAME,
+    version="1.0.0",
+    description="API Modular com Agente de IA"
 )
 
-# Modelos Pydantic para validação
-class ChatRequest(BaseModel):
-    message: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-class ChatResponse(BaseModel):
-    response: str
-
-@app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
-    """
-    Recebe uma mensagem, processa com o Agente de IA e retorna a resposta.
-    """
-    try:
-        user_message = request.message
-        
-        # Chama o agente. O SDK do Strands torna o objeto 'agent' chamável (callable)
-        # O retorno geralmente possui um campo .text ou similar com a resposta final
-        result = agent_instance(user_message)
-        
-        # Nota: Verifique na documentação exata do Strands se o retorno é objeto ou string.
-        # Geralmente é um objeto com metadados. Assumindo .text ou conversão para str.
-        response_text = result.text if hasattr(result, "text") else str(result)
-
-        return ChatResponse(response=response_text)
-
-    except Exception as e:
-        # Log do erro real no console para debug
-        print(f"Erro no processamento do agente: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno ao processar a solicitação.")
+app.include_router(api_router)
 
 if __name__ == "__main__":
     import uvicorn
